@@ -205,3 +205,11 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project-specific
+assets/backgrounds/*.mp4
+assets/backgrounds/*.webm
+assets/backgrounds/*.mkv
+output/*.mp4
+*.pt
+.DS_Store
