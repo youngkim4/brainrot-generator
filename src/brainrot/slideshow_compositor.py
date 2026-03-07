@@ -5,13 +5,28 @@ from pathlib import Path
 import numpy as np
 from moviepy import (
     AudioFileClip,
-    CompositeVideoClip,
     ImageClip,
     VideoClip,
     concatenate_videoclips,
     vfx,
 )
 from PIL import Image, ImageDraw, ImageFont
+
+_FONT_PATHS = [
+    "/System/Library/Fonts/Helvetica.ttc",  # macOS
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux (Debian/Ubuntu)
+    "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",  # Linux (Arch)
+    "C:\\Windows\\Fonts\\arial.ttf",  # Windows
+]
+
+
+def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    for path in _FONT_PATHS:
+        try:
+            return ImageFont.truetype(path, size)
+        except (OSError, IOError):
+            continue
+    return ImageFont.load_default()
 
 
 def _label_from_path(path: Path) -> str:
@@ -58,12 +73,8 @@ def _render_intro_card(
     img = Image.fromarray(arr)
     draw = ImageDraw.Draw(img)
 
-    # large bold prompt text
     font_size = width // 12
-    try:
-        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
-    except (OSError, IOError):
-        font = ImageFont.load_default()
+    font = _load_font(font_size)
 
     # word-wrap
     words = prompt.split()
@@ -118,10 +129,7 @@ def _render_slide_with_label(
     draw = ImageDraw.Draw(img)
 
     font_size = width // 20
-    try:
-        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
-    except (OSError, IOError):
-        font = ImageFont.load_default()
+    font = _load_font(font_size)
 
     bbox = draw.textbbox((0, 0), label, font=font)
     text_w = bbox[2] - bbox[0]
@@ -179,6 +187,9 @@ def compose_slideshow(
     bgm_volume: float = 0.8,
 ) -> Path:
     """Assemble slideshow: intro card + image slides with fade + ken burns + bgm."""
+    if not image_paths:
+        raise ValueError("image_paths must not be empty")
+
     clips = []
 
     # intro card
@@ -210,30 +221,34 @@ def compose_slideshow(
 
     # bgm
     original_bgm = AudioFileClip(str(bgm_path))
+    if original_bgm.duration <= 0:
+        original_bgm.close()
+        raise RuntimeError(f"BGM file has zero duration: {bgm_path}")
+
     bgm = original_bgm
     if original_bgm.duration < video.duration:
-        # loop bgm to fill video
         loops_needed = int(video.duration / original_bgm.duration) + 1
         from moviepy import concatenate_audioclips
         bgm = concatenate_audioclips([original_bgm] * loops_needed)
     bgm = bgm.with_duration(video.duration).with_volume_scaled(bgm_volume)
 
     final = video.with_audio(bgm)
-
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    final.write_videofile(
-        str(output_path),
-        fps=fps,
-        codec="libx264",
-        audio_codec="aac",
-        logger=None,
-    )
 
-    final.close()
-    bgm.close()
-    original_bgm.close()
-    for clip in clips:
-        clip.close()
-    video.close()
+    try:
+        final.write_videofile(
+            str(output_path),
+            fps=fps,
+            codec="libx264",
+            audio_codec="aac",
+            logger=None,
+        )
+    finally:
+        final.close()
+        bgm.close()
+        original_bgm.close()
+        for clip in clips:
+            clip.close()
+        video.close()
 
     return output_path
