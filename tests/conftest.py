@@ -3,6 +3,7 @@
 import pytest
 
 from brainrot.config import CaptionStyle, PipelineConfig, TTSProvider, VideoConfig
+from brainrot.quiz_config import QuizData, QuizType, TriviaQuestion, WYRQuestion
 from brainrot.timestamps import WordTimestamp
 
 
@@ -29,3 +30,38 @@ def dev_video_config() -> VideoConfig:
 @pytest.fixture
 def default_caption_style() -> CaptionStyle:
     return CaptionStyle()
+
+
+@pytest.fixture
+def sample_trivia_quiz() -> QuizData:
+    return QuizData(
+        quiz_type=QuizType.TRIVIA,
+        questions=(
+            TriviaQuestion(
+                question="What is the capital of France?",
+                options=("Berlin", "Paris", "London", "Madrid"),
+                correct=1,
+                time_limit=7.0,
+            ),
+            TriviaQuestion(
+                question="Largest planet?",
+                options=("Mars", "Jupiter", "Saturn"),
+                correct=1,
+                time_limit=5.0,
+            ),
+        ),
+    )
+
+
+@pytest.fixture
+def sample_wyr_quiz() -> QuizData:
+    return QuizData(
+        quiz_type=QuizType.WYR,
+        questions=(
+            WYRQuestion(
+                option_a="Have unlimited money",
+                option_b="Have unlimited time",
+                time_limit=6.0,
+            ),
+        ),
+    )

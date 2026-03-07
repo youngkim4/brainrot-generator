@@ -12,4 +12,9 @@ __all__ = [
     "compositor",
     "story_source",
     "cli",
+    "quiz_config",
+    "quiz_loader",
+    "quiz_renderer",
+    "quiz_compositor",
+    "quiz_pipeline",
 ]
