@@ -36,14 +36,14 @@ class PipelineConfig:
     story_text: str
     background_video: Path
     output_path: Path
-    tts_provider: TTSProvider = TTSProvider.EDGE
-    tts_voice: str = "en-US-ChristopherNeural"
+    tts_provider: TTSProvider = TTSProvider.POLLY
+    tts_voice: str = "Brian"
     elevenlabs_voice_id: str = ""
     elevenlabs_api_key: str = ""
     elevenlabs_model_id: str = "eleven_multilingual_v2"
     polly_region: str = "us-east-1"
     bgm_path: Path | None = None
-    bgm_volume: float = 0.15  # relative to narration
+    bgm_volume: float = 0.1  # relative to narration
     video: VideoConfig = field(default_factory=VideoConfig)
     captions: CaptionStyle = field(default_factory=CaptionStyle)
     dev_mode: bool = False  # half-res mode
