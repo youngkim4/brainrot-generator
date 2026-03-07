@@ -1,0 +1,15 @@
+{
+  "type": "wyr",
+  "questions": [
+    {
+      "option_a": "Have unlimited money",
+      "option_b": "Have unlimited time",
+      "time_limit": 6
+    },
+    {
+      "option_a": "Be able to fly",
+      "option_b": "Be able to read minds",
+      "time_limit": 6
+    }
+  ]
+}

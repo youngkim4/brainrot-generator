@@ -1,0 +1,29 @@
+{
+  "type": "trivia",
+  "questions": [
+    {
+      "question": "What is the capital of France?",
+      "options": ["Berlin", "Paris", "London", "Madrid"],
+      "correct": 1,
+      "time_limit": 15
+    },
+    {
+      "question": "Which planet is the largest in our solar system?",
+      "options": ["Mars", "Jupiter", "Saturn", "Neptune"],
+      "correct": 1,
+      "time_limit": 15
+    },
+    {
+      "question": "How many sides does a hexagon have?",
+      "options": ["5", "6", "7", "8"],
+      "correct": 1,
+      "time_limit": 13
+    },
+    {
+      "question": "What year did the Titanic sink?",
+      "options": ["1905", "1912", "1920", "1898"],
+      "correct": 1,
+      "time_limit": 15
+    }
+  ]
+}
