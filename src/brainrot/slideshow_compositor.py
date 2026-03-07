@@ -7,6 +7,7 @@ from moviepy import (
     AudioFileClip,
     CompositeVideoClip,
     ImageClip,
+    VideoClip,
     concatenate_videoclips,
     vfx,
 )
@@ -45,19 +46,16 @@ def _render_intro_card(
     height: int,
 ) -> np.ndarray:
     """Render dramatic intro card — dark bg with large centered prompt text."""
-    img = Image.new("RGB", (width, height), (8, 8, 12))
-    draw = ImageDraw.Draw(img)
+    arr = np.full((height, width, 3), (8, 8, 12), dtype=np.float32)
 
-    # subtle vignette gradient
-    for y_pos in range(height):
-        for x_pos in range(width):
-            dx = (x_pos - width / 2) / (width / 2)
-            dy = (y_pos - height / 2) / (height / 2)
-            dist = min(1.0, (dx * dx + dy * dy) ** 0.5)
-            darken = max(0, int(20 * dist))
-            r, g, b = img.getpixel((x_pos, y_pos))
-            img.putpixel((x_pos, y_pos), (max(0, r - darken), max(0, g - darken), max(0, b - darken)))
-
+    # vectorized vignette gradient
+    yy, xx = np.mgrid[0:height, 0:width]
+    dx = (xx - width / 2) / (width / 2)
+    dy = (yy - height / 2) / (height / 2)
+    dist = np.clip(np.sqrt(dx ** 2 + dy ** 2), 0, 1)
+    darken = (20 * dist).astype(np.float32)[..., None]
+    arr = np.clip(arr - darken, 0, 255).astype(np.uint8)
+    img = Image.fromarray(arr)
     draw = ImageDraw.Draw(img)
 
     # large bold prompt text
@@ -145,7 +143,7 @@ def _make_ken_burns_clip(
     duration: float,
     zoom_factor: float,
     fps: int,
-) -> ImageClip:
+) -> VideoClip:
     """Create a clip with slow zoom (Ken Burns) effect."""
     h, w = frame.shape[:2]
 
@@ -163,7 +161,7 @@ def _make_ken_burns_clip(
         pil_img = pil_img.resize((w, h), PILImage.LANCZOS)
         return np.array(pil_img)
 
-    return ImageClip(make_frame, duration=duration).with_fps(fps)
+    return VideoClip(make_frame, duration=duration).with_fps(fps)
 
 
 def compose_slideshow(
@@ -211,12 +209,13 @@ def compose_slideshow(
     )
 
     # bgm
-    bgm = AudioFileClip(str(bgm_path))
-    if bgm.duration < video.duration:
+    original_bgm = AudioFileClip(str(bgm_path))
+    bgm = original_bgm
+    if original_bgm.duration < video.duration:
         # loop bgm to fill video
-        loops_needed = int(video.duration / bgm.duration) + 1
+        loops_needed = int(video.duration / original_bgm.duration) + 1
         from moviepy import concatenate_audioclips
-        bgm = concatenate_audioclips([bgm] * loops_needed)
+        bgm = concatenate_audioclips([original_bgm] * loops_needed)
     bgm = bgm.with_duration(video.duration).with_volume_scaled(bgm_volume)
 
     final = video.with_audio(bgm)
@@ -232,5 +231,9 @@ def compose_slideshow(
 
     final.close()
     bgm.close()
+    original_bgm.close()
+    for clip in clips:
+        clip.close()
+    video.close()
 
     return output_path
