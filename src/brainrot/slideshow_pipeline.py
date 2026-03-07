@@ -62,6 +62,9 @@ def run_slideshow_with_generation(
         model=config.gemini_model,
     )
 
+    if len(image_paths) < 2:
+        raise ValueError("Need at least 2 images for a slideshow")
+
     return compose_slideshow(
         image_paths=image_paths,
         bgm_path=config.bgm_path,
