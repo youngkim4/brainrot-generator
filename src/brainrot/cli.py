@@ -80,6 +80,11 @@ def slideshow(
     dev: bool,
 ):
     """Generate slideshow video from images with BGM."""
+    if seconds_per_slide <= 0:
+        raise click.BadParameter("Must be > 0", param_hint="--seconds-per-slide")
+    if intro_duration <= 0:
+        raise click.BadParameter("Must be > 0", param_hint="--intro-duration")
+
     from .slideshow_config import SlideshowConfig
     from .slideshow_pipeline import run_slideshow
 
@@ -125,6 +130,11 @@ def slideshow_gen(
     dev: bool,
 ):
     """Generate AI slideshow: auto-creates concepts and images from a prompt."""
+    if seconds_per_slide <= 0:
+        raise click.BadParameter("Must be > 0", param_hint="--seconds-per-slide")
+    if intro_duration <= 0:
+        raise click.BadParameter("Must be > 0", param_hint="--intro-duration")
+
     from .slideshow_config import SlideshowConfig
     from .slideshow_pipeline import run_slideshow_with_generation
 
