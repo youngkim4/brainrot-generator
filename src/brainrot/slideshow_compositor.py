@@ -219,17 +219,17 @@ def compose_slideshow(
         padding=-fade_duration,
     )
 
-    # bgm
-    original_bgm = AudioFileClip(str(bgm_path))
-    if original_bgm.duration <= 0:
-        original_bgm.close()
+    # bgm — must be longer than video, trimmed to match
+    bgm = AudioFileClip(str(bgm_path))
+    if bgm.duration <= 0:
+        bgm.close()
         raise RuntimeError(f"BGM file has zero duration: {bgm_path}")
-
-    bgm = original_bgm
-    if original_bgm.duration < video.duration:
-        loops_needed = int(video.duration / original_bgm.duration) + 1
-        from moviepy import concatenate_audioclips
-        bgm = concatenate_audioclips([original_bgm] * loops_needed)
+    if bgm.duration < video.duration:
+        bgm.close()
+        raise RuntimeError(
+            f"BGM ({bgm.duration:.1f}s) is shorter than video ({video.duration:.1f}s). "
+            "Use a longer BGM track."
+        )
     bgm = bgm.with_duration(video.duration).with_volume_scaled(bgm_volume)
 
     final = video.with_audio(bgm)
@@ -246,7 +246,6 @@ def compose_slideshow(
     finally:
         final.close()
         bgm.close()
-        original_bgm.close()
         for clip in clips:
             clip.close()
         video.close()
