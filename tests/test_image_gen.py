@@ -86,6 +86,35 @@ def test_generate_images_success(tmp_path):
     assert paths[0].exists()
 
 
+@patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+def test_generate_images_path_traversal(tmp_path):
+    from PIL import Image as PILImage
+    from io import BytesIO
+
+    img = PILImage.new("RGB", (100, 100), (255, 0, 0))
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+
+    mock_part = MagicMock()
+    mock_part.inline_data = MagicMock()
+    mock_part.inline_data.data = buf.getvalue()
+
+    mock_response = MagicMock()
+    mock_response.parts = [mock_part]
+
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+
+    # path traversal characters are sanitized to underscores
+    subjects = [{"subject": "../../../etc/passwd", "setting_detail": "test"}]
+    with patch("google.genai.Client", return_value=mock_client):
+        paths = generate_images("test", subjects, tmp_path)
+
+    assert len(paths) == 1
+    assert str(paths[0].resolve()).startswith(str(tmp_path.resolve()))
+    assert "etc" not in str(paths[0].parent)
+
+
 @patch.dict("os.environ", {"GEMINI_API_KEY": ""})
 def test_generate_subjects_no_api_key():
     with pytest.raises(RuntimeError, match="GEMINI_API_KEY"):
