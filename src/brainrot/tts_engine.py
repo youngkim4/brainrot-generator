@@ -55,39 +55,47 @@ class PollyTTSEngine(TTSEngine):
 
     async def synthesize(self, text: str, output_path: Path) -> Path:
         import boto3
+        from botocore.exceptions import NoCredentialsError
 
-        client = boto3.client("polly", region_name=self.region)
-
-        # Polly has a 3000 char limit per request, split if needed
-        chunks = self._split_text(text, max_chars=2900)
-        audio_bytes = b""
-        for chunk in chunks:
-            resp = client.synthesize_speech(
-                Text=chunk,
-                VoiceId=self.voice,
-                Engine="neural",
-                OutputFormat="mp3",
+        try:
+            client = boto3.client("polly", region_name=self.region)
+            client.describe_voices(LanguageCode="en-US")
+        except NoCredentialsError:
+            raise RuntimeError(
+                "AWS credentials not found. Configure via environment variables "
+                "(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) or AWS CLI."
             )
-            audio_bytes += resp["AudioStream"].read()
 
+        chunks = self._split_text(text, max_chars=2900)
         with open(output_path, "wb") as f:
-            f.write(audio_bytes)
+            for chunk in chunks:
+                resp = client.synthesize_speech(
+                    Text=chunk,
+                    VoiceId=self.voice,
+                    Engine="neural",
+                    OutputFormat="mp3",
+                )
+                for audio_chunk in resp["AudioStream"].iter_chunks(1024):
+                    f.write(audio_chunk)
         return output_path
 
     @staticmethod
     def _split_text(text: str, max_chars: int = 2900) -> list[str]:
         """Split text on sentence boundaries."""
+        import re
+
         if len(text) <= max_chars:
             return [text]
+        sentences = re.split(r"(?<=[.!?])\s+", text)
         chunks = []
         current = ""
-        for sentence in text.replace(". ", ".|").split("|"):
-            if len(current) + len(sentence) > max_chars:
+        for sentence in sentences:
+            if len(current) + len(sentence) + 1 > max_chars:
                 if current:
                     chunks.append(current)
                 current = sentence
             else:
-                current += sentence
+                current = f"{current} {sentence}".strip() if current else sentence
         if current:
             chunks.append(current)
         return chunks
