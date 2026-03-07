@@ -164,9 +164,8 @@ def _make_ken_burns_clip(
         y1 = (h - crop_h) // 2
         cropped = frame[y1:y1 + crop_h, x1:x1 + crop_w]
         # resize back to original dimensions
-        from PIL import Image as PILImage
-        pil_img = PILImage.fromarray(cropped)
-        pil_img = pil_img.resize((w, h), PILImage.LANCZOS)
+        pil_img = Image.fromarray(cropped)
+        pil_img = pil_img.resize((w, h), Image.LANCZOS)
         return np.array(pil_img)
 
     return VideoClip(make_frame, duration=duration).with_fps(fps)
@@ -189,53 +188,63 @@ def compose_slideshow(
     """Assemble slideshow: intro card + image slides with fade + ken burns + bgm."""
     if not image_paths:
         raise ValueError("image_paths must not be empty")
+    if fade_duration * 2 >= seconds_per_slide:
+        raise ValueError(
+            f"fade_duration ({fade_duration}s) must be < seconds_per_slide/2 "
+            f"({seconds_per_slide / 2}s)"
+        )
+    if fade_duration >= intro_duration:
+        raise ValueError(
+            f"fade_duration ({fade_duration}s) must be < intro_duration ({intro_duration}s)"
+        )
 
     clips = []
-
-    # intro card
-    intro_frame = _render_intro_card(prompt, width, height)
-    intro_clip = (
-        ImageClip(intro_frame)
-        .with_duration(intro_duration)
-        .with_effects([vfx.CrossFadeOut(fade_duration)])
-    )
-    clips.append(intro_clip)
-
-    # image slides
-    for img_path in image_paths:
-        label = _label_from_path(img_path)
-        slide_frame = _render_slide_with_label(img_path, label, width, height)
-        slide_clip = _make_ken_burns_clip(slide_frame, seconds_per_slide, ken_burns_zoom, fps)
-        slide_clip = slide_clip.with_effects([
-            vfx.CrossFadeIn(fade_duration),
-            vfx.CrossFadeOut(fade_duration),
-        ])
-        clips.append(slide_clip)
-
-    # concatenate with crossfade overlap
-    video = concatenate_videoclips(
-        clips,
-        method="compose",
-        padding=-fade_duration,
-    )
-
-    # bgm — must be longer than video, trimmed to match
-    bgm = AudioFileClip(str(bgm_path))
-    if bgm.duration <= 0:
-        bgm.close()
-        raise RuntimeError(f"BGM file has zero duration: {bgm_path}")
-    if bgm.duration < video.duration:
-        bgm.close()
-        raise RuntimeError(
-            f"BGM ({bgm.duration:.1f}s) is shorter than video ({video.duration:.1f}s). "
-            "Use a longer BGM track."
-        )
-    bgm = bgm.with_duration(video.duration).with_volume_scaled(bgm_volume)
-
-    final = video.with_audio(bgm)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    video = None
+    bgm = None
+    final = None
 
     try:
+        # intro card
+        intro_frame = _render_intro_card(prompt, width, height)
+        intro_clip = (
+            ImageClip(intro_frame)
+            .with_duration(intro_duration)
+            .with_effects([vfx.CrossFadeOut(fade_duration)])
+        )
+        clips.append(intro_clip)
+
+        # image slides
+        for img_path in image_paths:
+            label = _label_from_path(img_path)
+            slide_frame = _render_slide_with_label(img_path, label, width, height)
+            slide_clip = _make_ken_burns_clip(slide_frame, seconds_per_slide, ken_burns_zoom, fps)
+            slide_clip = slide_clip.with_effects([
+                vfx.CrossFadeIn(fade_duration),
+                vfx.CrossFadeOut(fade_duration),
+            ])
+            clips.append(slide_clip)
+
+        # concatenate with crossfade overlap
+        video = concatenate_videoclips(
+            clips,
+            method="compose",
+            padding=-fade_duration,
+        )
+
+        # bgm — must be longer than video, trimmed to match
+        bgm = AudioFileClip(str(bgm_path))
+        if bgm.duration <= 0:
+            raise RuntimeError(f"BGM file has zero duration: {bgm_path}")
+        if bgm.duration < video.duration:
+            raise RuntimeError(
+                f"BGM ({bgm.duration:.1f}s) is shorter than video "
+                f"({video.duration:.1f}s). Use a longer BGM track."
+            )
+        bgm = bgm.with_duration(video.duration).with_volume_scaled(bgm_volume)
+
+        final = video.with_audio(bgm)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
         final.write_videofile(
             str(output_path),
             fps=fps,
@@ -244,10 +253,13 @@ def compose_slideshow(
             logger=None,
         )
     finally:
-        final.close()
-        bgm.close()
+        if final is not None:
+            final.close()
+        if bgm is not None:
+            bgm.close()
+        if video is not None:
+            video.close()
         for clip in clips:
             clip.close()
-        video.close()
 
     return output_path
