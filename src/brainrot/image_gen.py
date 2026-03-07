@@ -83,6 +83,10 @@ def generate_subjects(
     if not isinstance(subjects, list) or len(subjects) < 2:
         raise RuntimeError(f"Expected list of subjects, got: {raw[:200]}")
 
+    for i, item in enumerate(subjects[:count]):
+        if not isinstance(item, dict) or "subject" not in item:
+            raise RuntimeError(f"Subject {i} missing 'subject' key: {item!r}")
+
     return subjects[:count]
 
 
