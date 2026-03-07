@@ -12,4 +12,8 @@ __all__ = [
     "compositor",
     "story_source",
     "cli",
+    "image_gen",
+    "slideshow_config",
+    "slideshow_compositor",
+    "slideshow_pipeline",
 ]

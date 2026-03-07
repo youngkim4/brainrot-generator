@@ -62,6 +62,105 @@ def generate(story: str, background: str, output: str, tts: str, voice: str, dev
     click.echo(f"Done! Output: {result}")
 
 
+@main.command()
+@click.option("--prompt", required=True, help="Question for the intro card, e.g. 'Where would you live?'")
+@click.option("--images-dir", required=True, type=click.Path(exists=True), help="Directory of images for slides")
+@click.option("--bgm", required=True, type=click.Path(exists=True), help="Background music file")
+@click.option("--output", "-o", default="output/slideshow.mp4", help="Output file path")
+@click.option("--seconds-per-slide", default=6.0, type=float, help="Duration per slide in seconds")
+@click.option("--intro-duration", default=3.0, type=float, help="Intro card duration in seconds")
+@click.option("--dev", is_flag=True, help="Dev mode: render at 540x960 for speed")
+def slideshow(
+    prompt: str,
+    images_dir: str,
+    bgm: str,
+    output: str,
+    seconds_per_slide: float,
+    intro_duration: float,
+    dev: bool,
+):
+    """Generate slideshow video from images with BGM."""
+    from .slideshow_config import SlideshowConfig
+    from .slideshow_pipeline import run_slideshow
+
+    config = SlideshowConfig(
+        prompt=prompt,
+        output_path=Path(output),
+        bgm_path=Path(bgm),
+        image_dir=Path(images_dir),
+        seconds_per_slide=seconds_per_slide,
+        intro_duration=intro_duration,
+        dev_mode=dev,
+    )
+
+    click.echo("Generating slideshow...")
+    click.echo(f"  Prompt: {prompt}")
+    click.echo(f"  Images: {images_dir}")
+    click.echo(f"  BGM: {bgm}")
+    click.echo(f"  Resolution: {'540x960 (dev)' if dev else '1080x1920'}")
+
+    result = run_slideshow(config)
+    click.echo(f"Done! Output: {result}")
+
+
+@main.command("slideshow-gen")
+@click.option("--prompt", required=True, help="Question prompt, e.g. 'Where would you live?'")
+@click.option("--bgm", required=True, type=click.Path(exists=True), help="Background music file")
+@click.option("--output", "-o", default="output/slideshow.mp4", help="Output file path")
+@click.option("--subjects", default=None, help="Comma-separated subjects (auto-generated if omitted)")
+@click.option("--num-images", default=6, type=int, help="Number of images to generate (if auto)")
+@click.option("--images-dir", default=None, type=click.Path(), help="Directory to save generated images")
+@click.option("--seconds-per-slide", default=6.0, type=float, help="Duration per slide in seconds")
+@click.option("--intro-duration", default=3.0, type=float, help="Intro card duration in seconds")
+@click.option("--dev", is_flag=True, help="Dev mode: render at 540x960 for speed")
+def slideshow_gen(
+    prompt: str,
+    bgm: str,
+    output: str,
+    subjects: str | None,
+    num_images: int,
+    images_dir: str | None,
+    seconds_per_slide: float,
+    intro_duration: float,
+    dev: bool,
+):
+    """Generate AI slideshow: auto-creates concepts and images from a prompt."""
+    from .slideshow_config import SlideshowConfig
+    from .slideshow_pipeline import run_slideshow_with_generation
+
+    subject_dicts = None
+    if subjects:
+        # manual subjects — wrap as dicts with subject key only
+        subject_list = [s.strip() for s in subjects.split(",") if s.strip()]
+        if len(subject_list) < 2:
+            raise click.BadParameter("Need at least 2 subjects", param_hint="--subjects")
+        subject_dicts = [{"subject": s, "setting_detail": s} for s in subject_list]
+        num_images = len(subject_list)
+
+    config = SlideshowConfig(
+        prompt=prompt,
+        output_path=Path(output),
+        bgm_path=Path(bgm),
+        image_dir=Path(images_dir) if images_dir else None,
+        num_images=num_images,
+        seconds_per_slide=seconds_per_slide,
+        intro_duration=intro_duration,
+        dev_mode=dev,
+    )
+
+    click.echo("Generating slideshow with AI images...")
+    click.echo(f"  Prompt: {prompt}")
+    if subject_dicts:
+        click.echo(f"  Subjects: {', '.join(s['subject'] for s in subject_dicts)}")
+    else:
+        click.echo(f"  Auto-generating {num_images} concepts...")
+    click.echo(f"  BGM: {bgm}")
+    click.echo(f"  Resolution: {'540x960 (dev)' if dev else '1080x1920'}")
+
+    result = run_slideshow_with_generation(config, subject_dicts)
+    click.echo(f"Done! Output: {result}")
+
+
 @main.command("download-bg")
 @click.argument("url")
 @click.option("--output", "-o", default="assets/backgrounds/", help="Output directory")
