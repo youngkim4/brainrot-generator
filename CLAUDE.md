@@ -4,6 +4,8 @@
 
 **What:** Automated short-form video generator for TikTok/Reels/Shorts. Combines background gameplay footage with TTS narration and word-highlighted captions.
 
+**Goal:** Maximize viewer attention. One word on screen at a time, pop-in animation, no visual clutter competing with the background video.
+
 **Stack:** Python 3.10+, MoviePy 2.x, edge-tts / ElevenLabs, whisper-timestamped, Pillow, yt-dlp, Click
 
 **Architecture:**
@@ -47,7 +49,7 @@ Each stage is an independent module with a clean interface. Stages are composabl
 - Always validate background video duration >= audio duration before compositing
 - TTS audio is the source of truth for video duration — trim background video to match, never stretch audio
 - Word timestamps must be validated — reject if total duration drifts >0.5s from audio length
-- Caption groups must never split mid-sentence when possible — prefer natural phrase boundaries
+- Captions show one word at a time with pop-in animation — no multi-word groups
 
 ### MoviePy v2 (CRITICAL — do not use v1 patterns)
 
