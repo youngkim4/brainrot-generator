@@ -1,5 +1,7 @@
 """Caption rendering."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -59,7 +61,8 @@ def create_single_word_frame(
 
     bbox = font.getbbox(word)
     text_w = bbox[2] - bbox[0]
-    text_h = font.getbbox("Ay")[3] - font.getbbox("Ay")[1]
+    ref_bbox = font.getbbox("Ay")
+    text_h = ref_bbox[3] - ref_bbox[1]
 
     x = (video.width - text_w) // 2
     y = _get_vertical_y(video, style, text_h)
