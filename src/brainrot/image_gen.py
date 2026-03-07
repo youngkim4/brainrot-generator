@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from io import BytesIO
 from pathlib import Path
 
@@ -62,7 +63,7 @@ def generate_subjects(
     client = genai.Client(api_key=api_key)
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model=model,
         contents=[_SUBJECT_GEN_PROMPT.format(prompt=prompt, count=count)],
         config=types.GenerateContentConfig(
             response_modalities=["TEXT"],
@@ -75,7 +76,10 @@ def generate_subjects(
         raw = raw.split("\n", 1)[1]
         raw = raw.rsplit("```", 1)[0]
 
-    subjects = json.loads(raw)
+    try:
+        subjects = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Gemini returned invalid JSON: {e}\nRaw: {raw[:300]}") from e
     if not isinstance(subjects, list) or len(subjects) < 2:
         raise RuntimeError(f"Expected list of subjects, got: {raw[:200]}")
 
@@ -135,8 +139,10 @@ def generate_images(
         for part in response.parts:
             if part.inline_data is not None:
                 image = Image.open(BytesIO(part.inline_data.data))
-                safe_name = label.lower().replace(" ", "_")
-                file_path = output_dir / f"{safe_name}.png"
+                safe_name = re.sub(r"[^\w\-]", "_", label.lower())[:64]
+                file_path = (output_dir / f"{safe_name}.png").resolve()
+                if not str(file_path).startswith(str(output_dir.resolve())):
+                    raise RuntimeError(f"Unsafe path from label: {label!r}")
                 image.save(str(file_path))
                 paths.append(file_path)
                 saved = True
