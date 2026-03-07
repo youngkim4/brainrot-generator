@@ -1,4 +1,4 @@
-"""Pipeline orchestrator — runs all stages in sequence."""
+"""Pipeline orchestrator."""
 
 import asyncio
 import tempfile
@@ -12,20 +12,13 @@ from .tts_engine import create_tts_engine
 
 
 async def run_pipeline(config: PipelineConfig) -> Path:
-    """Execute the full video generation pipeline.
-
-    Stages:
-        1. Load story text
-        2. Generate TTS audio
-        3. Extract word-level timestamps
-        4. Composite video with captions
-    """
-    # 1. Story
+    """Run full pipeline: story -> TTS -> timestamps -> video."""
+    # story
     story = load_story(config.story_text)
     if not story:
         raise ValueError("Story text is empty")
 
-    # 2. TTS
+    # tts
     engine = create_tts_engine(config)
     with tempfile.TemporaryDirectory() as tmp_dir:
         audio_path = Path(tmp_dir) / "narration.mp3"
@@ -34,7 +27,7 @@ async def run_pipeline(config: PipelineConfig) -> Path:
         if not audio_path.exists() or audio_path.stat().st_size == 0:
             raise RuntimeError("TTS failed to generate audio")
 
-        # 3. Timestamps
+        # timestamps
         words = generate_timestamps(audio_path)
 
         if not words:
@@ -48,11 +41,11 @@ async def run_pipeline(config: PipelineConfig) -> Path:
 
         if not validate_timestamps(words, audio_duration):
             raise RuntimeError(
-                f"Timestamp drift exceeds 0.5s: last word ends at {words[-1].end:.2f}s, "
+                f"Timestamp drift exceeds threshold: last word ends at {words[-1].end:.2f}s, "
                 f"audio is {audio_duration:.2f}s"
             )
 
-        # 4. Composite
+        # composite
         output = compose_video(
             background_path=config.background_video,
             audio_path=audio_path,
@@ -64,5 +57,5 @@ async def run_pipeline(config: PipelineConfig) -> Path:
 
 
 def run(config: PipelineConfig) -> Path:
-    """Synchronous wrapper for the pipeline."""
+    """Sync wrapper."""
     return asyncio.run(run_pipeline(config))

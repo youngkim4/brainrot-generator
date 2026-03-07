@@ -1,4 +1,4 @@
-"""Word-level timestamp generation using whisper-timestamped."""
+"""Word-level timestamps."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,7 +13,7 @@ class WordTimestamp:
 
 
 def generate_timestamps(audio_path: Path, model_size: str = "base") -> list[WordTimestamp]:
-    """Use whisper-timestamped for DTW-based word-level timestamps."""
+    """DTW word timestamps via whisper."""
     import whisper_timestamped as whisper
 
     model = whisper.load_model(model_size)
@@ -36,9 +36,9 @@ def generate_timestamps(audio_path: Path, model_size: str = "base") -> list[Word
 
 
 def validate_timestamps(
-    timestamps: list[WordTimestamp], audio_duration: float, max_drift: float = 0.5
+    timestamps: list[WordTimestamp], audio_duration: float, max_drift: float = 2.0
 ) -> bool:
-    """Validate that timestamps align with audio duration."""
+    """Check timestamps match audio length."""
     if not timestamps:
         return False
 

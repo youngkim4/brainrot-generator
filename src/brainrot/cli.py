@@ -1,17 +1,31 @@
-"""CLI entry point using Click."""
+"""CLI entry point."""
 
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 import click
 
 from .config import PipelineConfig, TTSProvider
 
 
+def _validate_video_url(url: str) -> None:
+    """Reject bad URLs."""
+    if url.startswith("-"):
+        raise click.BadParameter(
+            "URL must not start with '-'", param_hint="url"
+        )
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise click.BadParameter(
+            "URL must be an http:// or https:// URL", param_hint="url"
+        )
+
+
 @click.group()
 @click.version_option()
 def main():
-    """Brainrot Generator - Automated short-form video generation."""
+    """Brainrot video generator."""
     pass
 
 
@@ -23,7 +37,7 @@ def main():
 @click.option("--voice", default="en-US-ChristopherNeural", help="Voice name (edge-tts) or voice ID (ElevenLabs)")
 @click.option("--dev", is_flag=True, help="Dev mode: render at 540x960 for speed")
 def generate(story: str, background: str, output: str, tts: str, voice: str, dev: bool):
-    """Generate a short-form video with TTS narration and captions."""
+    """Generate video with TTS and captions."""
     from .pipeline import run
 
     provider = TTSProvider.ELEVENLABS if tts == "elevenlabs" else TTSProvider.EDGE
@@ -39,7 +53,7 @@ def generate(story: str, background: str, output: str, tts: str, voice: str, dev
         dev_mode=dev,
     )
 
-    click.echo(f"Generating video...")
+    click.echo("Generating video...")
     click.echo(f"  TTS: {tts} ({voice})")
     click.echo(f"  Background: {background}")
     click.echo(f"  Resolution: {'540x960 (dev)' if dev else '1080x1920'}")
@@ -52,9 +66,10 @@ def generate(story: str, background: str, output: str, tts: str, voice: str, dev
 @click.argument("url")
 @click.option("--output", "-o", default="assets/backgrounds/", help="Output directory")
 def download_bg(url: str, output: str):
-    """Download a background video from YouTube."""
+    """Download bg video from YouTube."""
     import subprocess
 
+    _validate_video_url(url)
     output_dir = Path(output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
