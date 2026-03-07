@@ -12,8 +12,13 @@ class WordTimestamp:
     confidence: float
 
 
-def generate_timestamps(audio_path: Path, model_size: str = "base") -> list[WordTimestamp]:
-    """DTW word timestamps via whisper."""
+_MIN_CONFIDENCE = 0.5
+
+
+def generate_timestamps(
+    audio_path: Path, model_size: str = "base", min_confidence: float = _MIN_CONFIDENCE
+) -> list[WordTimestamp]:
+    """DTW word timestamps via whisper. Filters low-confidence words."""
     import whisper_timestamped as whisper
 
     model = whisper.load_model(model_size)
@@ -23,12 +28,15 @@ def generate_timestamps(audio_path: Path, model_size: str = "base") -> list[Word
     timestamps = []
     for segment in result.get("segments", []):
         for word_info in segment.get("words", []):
+            confidence = word_info.get("confidence", 0.0)
+            if confidence < min_confidence:
+                continue
             timestamps.append(
                 WordTimestamp(
                     word=word_info["text"].strip(),
                     start=word_info["start"],
                     end=word_info["end"],
-                    confidence=word_info.get("confidence", 0.0),
+                    confidence=confidence,
                 )
             )
 
@@ -36,7 +44,7 @@ def generate_timestamps(audio_path: Path, model_size: str = "base") -> list[Word
 
 
 def validate_timestamps(
-    timestamps: list[WordTimestamp], audio_duration: float, max_drift: float = 2.0
+    timestamps: list[WordTimestamp], audio_duration: float, max_drift: float = 1.0
 ) -> bool:
     """Check timestamps match audio length."""
     if not timestamps:
