@@ -33,21 +33,26 @@ def main():
 @click.option("--story", required=True, help="Story text or path to a text file")
 @click.option("--background", required=True, type=click.Path(exists=True), help="Path to background video")
 @click.option("--output", "-o", default="output/video.mp4", help="Output file path")
-@click.option("--tts", type=click.Choice(["edge", "elevenlabs"]), default="edge", help="TTS provider")
-@click.option("--voice", default="en-US-ChristopherNeural", help="Voice name (edge-tts) or voice ID (ElevenLabs)")
+@click.option("--tts", type=click.Choice(["edge", "elevenlabs", "polly"]), default="polly", help="TTS provider")
+@click.option("--voice", default="Brian", help="Voice name (edge-tts/polly) or voice ID (ElevenLabs)")
 @click.option("--dev", is_flag=True, help="Dev mode: render at 540x960 for speed")
 def generate(story: str, background: str, output: str, tts: str, voice: str, dev: bool):
     """Generate video with TTS and captions."""
     from .pipeline import run
 
-    provider = TTSProvider.ELEVENLABS if tts == "elevenlabs" else TTSProvider.EDGE
+    _provider_map = {
+        "edge": TTSProvider.EDGE,
+        "elevenlabs": TTSProvider.ELEVENLABS,
+        "polly": TTSProvider.POLLY,
+    }
+    provider = _provider_map[tts]
 
     config = PipelineConfig(
         story_text=story,
         background_video=Path(background),
         output_path=Path(output),
         tts_provider=provider,
-        tts_voice=voice if provider == TTSProvider.EDGE else "en-US-ChristopherNeural",
+        tts_voice=voice if provider != TTSProvider.ELEVENLABS else "Brian",
         elevenlabs_voice_id=voice if provider == TTSProvider.ELEVENLABS else "",
         elevenlabs_api_key=os.environ.get("ELEVENLABS_API_KEY", ""),
         dev_mode=dev,
@@ -77,6 +82,7 @@ def download_bg(url: str, output: str):
         "yt-dlp",
         "--format", "bestvideo[height<=1920]+bestaudio/best[height<=1920]",
         "--merge-output-format", "mp4",
+        "--restrict-filenames",
         "--output", str(output_dir / "%(title)s.%(ext)s"),
         url,
     ]
