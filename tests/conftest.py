@@ -1,4 +1,4 @@
-"""Shared test fixtures."""
+"""Shared fixtures."""
 
 import pytest
 

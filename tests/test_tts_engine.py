@@ -1,4 +1,4 @@
-"""Tests for TTS engine module."""
+"""TTS engine tests."""
 
 import pytest
 
