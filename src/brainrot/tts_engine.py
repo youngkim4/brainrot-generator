@@ -101,6 +101,43 @@ class PollyTTSEngine(TTSEngine):
         return chunks
 
 
+class CartesiaTTSEngine(TTSEngine):
+    def __init__(
+        self,
+        api_key: str,
+        voice_id: str = "a0e99841-438c-4a64-b679-ae501e7d6091",
+        model_id: str = "sonic-3",
+    ):
+        self.api_key = api_key
+        self.voice_id = voice_id
+        self.model_id = model_id
+
+    async def synthesize(self, text: str, output_path: Path) -> Path:
+        from cartesia import AsyncCartesia
+
+        client = AsyncCartesia(api_key=self.api_key)
+        try:
+            output_format = {
+                "container": "wav",
+                "sample_rate": 44100,
+                "encoding": "pcm_s16le",
+            }
+
+            response = await client.tts.generate(
+                model_id=self.model_id,
+                transcript=text,
+                voice={"mode": "id", "id": self.voice_id},
+                language="en",
+                output_format=output_format,
+            )
+
+            await response.write_to_file(output_path)
+        finally:
+            await client.close()
+
+        return output_path
+
+
 def create_tts_engine(config: PipelineConfig) -> TTSEngine:
     if config.tts_provider == TTSProvider.ELEVENLABS:
         if not config.elevenlabs_api_key:
@@ -111,6 +148,14 @@ def create_tts_engine(config: PipelineConfig) -> TTSEngine:
             config.elevenlabs_api_key,
             config.elevenlabs_voice_id,
             config.elevenlabs_model_id,
+        )
+    if config.tts_provider == TTSProvider.CARTESIA:
+        if not config.cartesia_api_key:
+            raise ValueError("Cartesia API key required. Set CARTESIA_API_KEY env var.")
+        return CartesiaTTSEngine(
+            config.cartesia_api_key,
+            config.cartesia_voice_id,
+            config.cartesia_model_id,
         )
     if config.tts_provider == TTSProvider.POLLY:
         return PollyTTSEngine(config.tts_voice, config.polly_region)

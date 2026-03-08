@@ -4,6 +4,7 @@ import pytest
 
 from brainrot.config import PipelineConfig, TTSProvider
 from brainrot.tts_engine import (
+    CartesiaTTSEngine,
     EdgeTTSEngine,
     ElevenLabsTTSEngine,
     create_tts_engine,
@@ -57,6 +58,47 @@ def test_create_tts_engine_elevenlabs_success():
     )
     engine = create_tts_engine(config)
     assert isinstance(engine, ElevenLabsTTSEngine)
+
+
+def test_create_tts_engine_cartesia_requires_api_key():
+    config = PipelineConfig(
+        story_text="test",
+        background_video=Path("bg.mp4"),
+        output_path=Path("out.mp4"),
+        tts_provider=TTSProvider.CARTESIA,
+        cartesia_api_key="",
+    )
+    with pytest.raises(ValueError, match="Cartesia API key"):
+        create_tts_engine(config)
+
+
+def test_create_tts_engine_cartesia_success():
+    config = PipelineConfig(
+        story_text="test",
+        background_video=Path("bg.mp4"),
+        output_path=Path("out.mp4"),
+        tts_provider=TTSProvider.CARTESIA,
+        cartesia_api_key="sk-test-cartesia",
+    )
+    engine = create_tts_engine(config)
+    assert isinstance(engine, CartesiaTTSEngine)
+    assert engine.voice_id == "a0e99841-438c-4a64-b679-ae501e7d6091"
+    assert engine.model_id == "sonic-3"
+
+
+def test_create_tts_engine_cartesia_custom_voice():
+    config = PipelineConfig(
+        story_text="test",
+        background_video=Path("bg.mp4"),
+        output_path=Path("out.mp4"),
+        tts_provider=TTSProvider.CARTESIA,
+        cartesia_api_key="sk-test-cartesia",
+        cartesia_voice_id="custom-voice-id",
+        cartesia_model_id="sonic-3",
+    )
+    engine = create_tts_engine(config)
+    assert isinstance(engine, CartesiaTTSEngine)
+    assert engine.voice_id == "custom-voice-id"
 
 
 @pytest.mark.asyncio

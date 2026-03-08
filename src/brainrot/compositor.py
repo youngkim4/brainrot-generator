@@ -16,7 +16,7 @@ from .config import CaptionStyle, PipelineConfig, VideoConfig
 from .reddit_overlay import create_reddit_card
 from .timestamps import WordTimestamp
 
-_INTRO_DURATION = 3.0
+_INTRO_DURATION = 2.0
 _POP_IN_MS = 0.15  # scale-up pop duration
 _POP_OUT_MS = 0.12
 
