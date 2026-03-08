@@ -13,18 +13,18 @@ from .config import VideoConfig
 
 
 _SUBREDDITS = [
-    "r/nosleep",
-    "r/creepypasta",
-    "r/LetsNotMeet",
-    "r/shortscarystories",
-    "r/TrueScaryStories",
-    "r/Glitch_in_the_Matrix",
-    "r/paranormal",
+    "r/UnresolvedMysteries",
+    "r/TrueCrime",
+    "r/UnsolvedMysteries",
+    "r/TrueCrimeDiscussion",
+    "r/mystery",
+    "r/ColdCases",
+    "r/WithoutATrace",
 ]
 
 _USERNAME_PREFIXES = [
-    "throwaway", "anon_", "scared_", "midnight_", "shadow_",
-    "haunted_", "dark_", "lonely_", "silent_", "forgotten_",
+    "case_files_", "cold_case_", "true_crime_", "unsolved_",
+    "detective_", "forensic_", "missing_", "research_",
 ]
 
 # reddit dark mode colors
@@ -204,9 +204,9 @@ def create_reddit_card(
     subreddit = subreddit or random.choice(_SUBREDDITS)
     username = username or _generate_username()
     title = title or _generate_title(story_text)
-    upvotes = f"{random.randint(2, 45)}.{random.randint(1, 9)}k"
-    meta = f"Posted by {username} · {random.randint(1, 23)}h ago"
-    bottom_text = f"{random.randint(80, 999)} Comments   Share   Save"
+    upvotes = f"{random.randint(5, 85)}.{random.randint(1, 9)}k"
+    meta = f"Posted by {username} · {random.randint(1, 14)}d ago"
+    bottom_text = f"{random.randint(200, 3500)} Comments   Share   Save"
 
     font_sub = _get_font(int(26 * s), bold=True)
     font_meta = _get_font(int(22 * s))
