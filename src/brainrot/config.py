@@ -5,6 +5,9 @@ from enum import Enum
 from pathlib import Path
 
 
+CARTESIA_DEFAULT_VOICE = "a0e99841-438c-4a64-b679-ae501e7d6091"  # Barbershop Man
+
+
 class TTSProvider(Enum):
     EDGE = "edge"
     ELEVENLABS = "elevenlabs"
@@ -44,7 +47,7 @@ class PipelineConfig:
     elevenlabs_model_id: str = "eleven_multilingual_v2"
     polly_region: str = "us-east-1"
     cartesia_api_key: str = ""
-    cartesia_voice_id: str = "a0e99841-438c-4a64-b679-ae501e7d6091"  # Barbershop Man
+    cartesia_voice_id: str = CARTESIA_DEFAULT_VOICE
     cartesia_model_id: str = "sonic-3"
     bgm_path: Path | None = None
     bgm_volume: float = 0.1  # relative to narration

@@ -7,19 +7,20 @@ from brainrot.tts_engine import (
     CartesiaTTSEngine,
     EdgeTTSEngine,
     ElevenLabsTTSEngine,
+    PollyTTSEngine,
     create_tts_engine,
 )
 from pathlib import Path
 
 
-def test_create_tts_engine_defaults_to_edge():
+def test_create_tts_engine_defaults_to_polly():
     config = PipelineConfig(
         story_text="test",
         background_video=Path("bg.mp4"),
         output_path=Path("out.mp4"),
     )
     engine = create_tts_engine(config)
-    assert isinstance(engine, EdgeTTSEngine)
+    assert isinstance(engine, PollyTTSEngine)
 
 
 def test_create_tts_engine_elevenlabs_requires_api_key():

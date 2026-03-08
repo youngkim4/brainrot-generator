@@ -149,7 +149,7 @@ def create_tts_engine(config: PipelineConfig) -> TTSEngine:
             config.elevenlabs_voice_id,
             config.elevenlabs_model_id,
         )
-    if config.tts_provider == TTSProvider.CARTESIA:
+    elif config.tts_provider == TTSProvider.CARTESIA:
         if not config.cartesia_api_key:
             raise ValueError("Cartesia API key required. Set CARTESIA_API_KEY env var.")
         return CartesiaTTSEngine(
@@ -157,6 +157,6 @@ def create_tts_engine(config: PipelineConfig) -> TTSEngine:
             config.cartesia_voice_id,
             config.cartesia_model_id,
         )
-    if config.tts_provider == TTSProvider.POLLY:
+    elif config.tts_provider == TTSProvider.POLLY:
         return PollyTTSEngine(config.tts_voice, config.polly_region)
     return EdgeTTSEngine(config.tts_voice)

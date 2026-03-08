@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import click
 
-from .config import PipelineConfig, TTSProvider
+from .config import CARTESIA_DEFAULT_VOICE, PipelineConfig, TTSProvider
 
 
 def _validate_video_url(url: str) -> None:
@@ -57,7 +57,7 @@ def generate(story: str, background: str, output: str, tts: str, voice: str, dev
         elevenlabs_voice_id=voice if provider == TTSProvider.ELEVENLABS else "",
         elevenlabs_api_key=os.environ.get("ELEVENLABS_API_KEY", ""),
         cartesia_api_key=os.environ.get("CARTESIA_API_KEY", ""),
-        cartesia_voice_id=voice if provider == TTSProvider.CARTESIA else "a0e99841-438c-4a64-b679-ae501e7d6091",
+        cartesia_voice_id=voice if provider == TTSProvider.CARTESIA else CARTESIA_DEFAULT_VOICE,
         dev_mode=dev,
     )
 
