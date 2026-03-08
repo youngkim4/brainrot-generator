@@ -67,8 +67,8 @@ def generate(story: str, background: str, output: str, tts: str, voice: str, dev
 @click.option("--images-dir", required=True, type=click.Path(exists=True), help="Directory of images for slides")
 @click.option("--bgm", required=True, type=click.Path(exists=True), help="Background music file")
 @click.option("--output", "-o", default="output/slideshow.mp4", help="Output file path")
-@click.option("--seconds-per-slide", default=6.0, type=float, help="Duration per slide in seconds")
-@click.option("--intro-duration", default=3.0, type=float, help="Intro card duration in seconds")
+@click.option("--seconds-per-slide", default=7.0, type=float, help="Duration per slide in seconds")
+@click.option("--intro-duration", default=4.0, type=float, help="Intro card duration in seconds")
 @click.option("--dev", is_flag=True, help="Dev mode: render at 540x960 for speed")
 def slideshow(
     prompt: str,
@@ -113,10 +113,10 @@ def slideshow(
 @click.option("--bgm", required=True, type=click.Path(exists=True), help="Background music file")
 @click.option("--output", "-o", default="output/slideshow.mp4", help="Output file path")
 @click.option("--subjects", default=None, help="Comma-separated subjects (auto-generated if omitted)")
-@click.option("--num-images", default=6, type=int, help="Number of images to generate (if auto)")
+@click.option("--num-images", default=8, type=int, help="Number of images to generate (if auto)")
 @click.option("--images-dir", default=None, type=click.Path(), help="Directory to save generated images")
-@click.option("--seconds-per-slide", default=6.0, type=float, help="Duration per slide in seconds")
-@click.option("--intro-duration", default=3.0, type=float, help="Intro card duration in seconds")
+@click.option("--seconds-per-slide", default=7.0, type=float, help="Duration per slide in seconds")
+@click.option("--intro-duration", default=4.0, type=float, help="Intro card duration in seconds")
 @click.option("--dev", is_flag=True, help="Dev mode: render at 540x960 for speed")
 def slideshow_gen(
     prompt: str,

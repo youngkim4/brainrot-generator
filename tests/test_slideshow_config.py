@@ -12,14 +12,14 @@ def test_default_config():
         bgm_path=Path("music.mp3"),
     )
     assert config.prompt == "Where would you live?"
-    assert config.seconds_per_slide == 6.0
-    assert config.intro_duration == 3.0
+    assert config.seconds_per_slide == 7.0
+    assert config.intro_duration == 4.0
     assert config.fade_duration == 0.5
     assert config.ken_burns_zoom == 1.15
     assert config.width == 1080
     assert config.height == 1920
     assert config.fps == 30
-    assert config.num_images == 10
+    assert config.num_images == 8
     assert config.dev_mode is False
 
 

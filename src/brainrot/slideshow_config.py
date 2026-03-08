@@ -11,9 +11,9 @@ class SlideshowConfig:
     bgm_path: Path
     image_paths: tuple[Path, ...] = ()  # pre-existing images, skip generation
     image_dir: Path | None = None  # directory to save generated images
-    num_images: int = 10
-    seconds_per_slide: float = 6.0
-    intro_duration: float = 3.0
+    num_images: int = 8
+    seconds_per_slide: float = 7.0
+    intro_duration: float = 4.0
     fade_duration: float = 0.5
     ken_burns_zoom: float = 1.15  # 15% zoom over slide duration
     width: int = 1080
