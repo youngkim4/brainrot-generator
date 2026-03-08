@@ -5,19 +5,19 @@
       "question": "What is the capital of France?",
       "options": ["Berlin", "Paris", "London", "Madrid"],
       "correct": 1,
-      "time_limit": 7
+      "time_limit": 15
     },
     {
       "question": "Which planet is the largest in our solar system?",
       "options": ["Mars", "Jupiter", "Saturn", "Neptune"],
       "correct": 1,
-      "time_limit": 6
+      "time_limit": 15
     },
     {
       "question": "How many sides does a hexagon have?",
       "options": ["5", "6", "7", "8"],
       "correct": 1,
-      "time_limit": 5
+      "time_limit": 12
     }
   ]
 }
