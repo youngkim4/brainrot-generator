@@ -1,9 +1,12 @@
 """Quiz video compositing with MoviePy 2."""
 
+import shutil
+import wave
 from pathlib import Path
 
 import numpy as np
 from moviepy import (
+    AudioClip,
     AudioFileClip,
     CompositeAudioClip,
     CompositeVideoClip,
@@ -20,9 +23,45 @@ from .quiz_renderer import (
     render_countdown_bar,
     render_question_frame,
 )
+from .quiz_sfx import generate_all_sfx
+
+
+def _read_wav(path: Path) -> tuple[np.ndarray, int]:
+    """Read WAV into numpy samples array and sample rate. Cached by caller."""
+    with wave.open(str(path), "rb") as wf:
+        n_frames = wf.getnframes()
+        sample_rate = wf.getframerate()
+        raw = wf.readframes(n_frames)
+        samples = np.frombuffer(raw, dtype=np.int16).astype(np.float64) / 32767.0
+        samples = samples.reshape(-1, 1)  # mono -> (n, 1)
+    return samples, sample_rate
+
+
+def _make_sfx_clip(samples: np.ndarray, sample_rate: int) -> AudioClip:
+    """Build an AudioClip from pre-loaded samples.
+
+    MoviePy's CompositeAudioClip calls get_frame on ALL clips for ALL time
+    values, then multiplies by 0 for out-of-range times. AudioFileClip's reader
+    raises IOError for out-of-range access. Using a safe frame function that
+    returns silence for out-of-range times avoids this.
+    """
+    duration = len(samples) / sample_rate
+
+    def make_frame(t):
+        t_arr = np.atleast_1d(t)
+        result = np.zeros((len(t_arr), 1))
+        indices = (t_arr * sample_rate).astype(int)
+        valid = (indices >= 0) & (indices < len(samples))
+        result[valid] = samples[indices[valid]]
+        return result
+
+    return AudioClip(make_frame, duration=duration, fps=sample_rate)
 
 
 MAX_COUNTDOWN_FRAMES = 30
+SFX_VOLUME = 0.6
+TICK_VOLUME = 0.35
+URGENT_THRESHOLD = 0.7  # fraction of countdown elapsed before urgent ticks
 
 
 def _get_render_config(config: QuizPipelineConfig) -> VideoConfig:
@@ -49,22 +88,86 @@ def _compute_total_duration(
     return total
 
 
+def _add_sfx_clips(
+    audio_clips: list,
+    sfx_audio_clips: list[AudioClip],
+    sfx_samples: dict[str, tuple[np.ndarray, int]],
+    current_t: float,
+    tts_dur: float,
+    think_dur: float,
+    reveal_start: float,
+) -> None:
+    """Add SFX audio clips for one question to the audio timeline."""
+    # question intro whoosh
+    intro_clip = _make_sfx_clip(*sfx_samples["question_intro"])
+    sfx_audio_clips.append(intro_clip)
+    audio_clips.append(
+        intro_clip.with_start(current_t).with_volume_scaled(SFX_VOLUME)
+    )
+
+    if think_dur <= 0:
+        return
+
+    countdown_start = current_t + tts_dur
+
+    # countdown start tone
+    cd_start_clip = _make_sfx_clip(*sfx_samples["countdown_start"])
+    sfx_audio_clips.append(cd_start_clip)
+    audio_clips.append(
+        cd_start_clip.with_start(countdown_start).with_volume_scaled(SFX_VOLUME)
+    )
+
+    # ticking during countdown — one tick per second
+    tick_interval = 1.0
+    elapsed = 0.0
+    while elapsed < think_dur - 0.1:
+        progress = elapsed / think_dur
+        is_urgent = progress >= URGENT_THRESHOLD
+
+        sfx_key = "tick_urgent" if is_urgent else "tick"
+        volume = TICK_VOLUME * (1.3 if is_urgent else 1.0)
+
+        tick_clip = _make_sfx_clip(*sfx_samples[sfx_key])
+        sfx_audio_clips.append(tick_clip)
+        audio_clips.append(
+            tick_clip.with_start(countdown_start + elapsed)
+            .with_volume_scaled(volume)
+        )
+
+        # speed up ticks in urgent phase
+        tick_interval = 0.5 if is_urgent else 1.0
+        elapsed += tick_interval
+
+    # reveal chime
+    reveal_clip = _make_sfx_clip(*sfx_samples["reveal_correct"])
+    sfx_audio_clips.append(reveal_clip)
+    audio_clips.append(
+        reveal_clip.with_start(reveal_start).with_volume_scaled(SFX_VOLUME)
+    )
+
+
 def compose_quiz_video(
     background_path: Path,
     audio_paths: list[Path],
     audio_durations: list[float],
     config: QuizPipelineConfig,
 ) -> Path:
-    """Assemble quiz video: bg + question overlays + character + audio."""
+    """Assemble quiz video: bg + question overlays + character + audio + SFX."""
     render_config = _get_render_config(config)
     questions = config.quiz_data.questions
 
     total_duration = _compute_total_duration(questions, config)
 
+    # generate SFX WAVs, then pre-load samples into memory
+    sfx_paths = generate_all_sfx()
+    sfx_dir = sfx_paths["tick"].parent
+    sfx_samples = {name: _read_wav(path) for name, path in sfx_paths.items()}
+
     bg = VideoFileClip(str(background_path))
     original_bg = bg
     final = None
     tts_audio_clips: list[AudioFileClip] = []
+    sfx_audio_clips: list[AudioClip] = []
     try:
         # skip first 5s to avoid static intro
         bg_skip = 5.0
@@ -101,7 +204,11 @@ def compose_quiz_video(
             gap_dur = config.gap_duration
 
             # question frame overlay
-            q_frame = render_question_frame(question, render_config, reveal=False)
+            n_questions = len(questions)
+            q_frame = render_question_frame(
+                question, render_config, reveal=False,
+                question_index=i, total_questions=n_questions,
+            )
             q_clip = (
                 ImageClip(np.array(q_frame))
                 .with_duration(question.time_limit)
@@ -129,7 +236,10 @@ def compose_quiz_video(
             # reveal frame
             reveal_start = current_t + question.time_limit
             is_trivia = isinstance(question, TriviaQuestion)
-            reveal_frame = render_question_frame(question, render_config, reveal=is_trivia)
+            reveal_frame = render_question_frame(
+                question, render_config, reveal=is_trivia,
+                question_index=i, total_questions=n_questions,
+            )
             reveal_clip = (
                 ImageClip(np.array(reveal_frame))
                 .with_duration(reveal_dur)
@@ -138,10 +248,19 @@ def compose_quiz_video(
             )
             overlay_clips.append(reveal_clip)
 
-            # audio per question
+            # TTS audio
             tts_audio = AudioFileClip(str(audio_paths[i]))
             tts_audio_clips.append(tts_audio)
             audio_clips.append(tts_audio.with_start(current_t))
+
+            # SFX audio
+            _add_sfx_clips(
+                audio_clips, sfx_audio_clips, sfx_samples,
+                current_t=current_t,
+                tts_dur=tts_dur,
+                think_dur=think_dur,
+                reveal_start=reveal_start,
+            )
 
             current_t += question.time_limit + reveal_dur + gap_dur
 
@@ -168,6 +287,10 @@ def compose_quiz_video(
             final.close()
         for c in tts_audio_clips:
             c.close()
+        for c in sfx_audio_clips:
+            c.close()
         bg.close()
         if original_bg is not bg:
             original_bg.close()
+        # clean up temp SFX files
+        shutil.rmtree(sfx_dir, ignore_errors=True)
